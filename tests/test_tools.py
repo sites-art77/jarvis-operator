@@ -13,11 +13,21 @@ def test_tool_catalog_covers_computer_use():
         "press",
         "open_app",
         "open_url",
+        "fetch_url",
         "open_path",
         "list_dir",
         "read_file",
         "write_file",
         "run_command",
+        "clipboard_get",
+        "clipboard_set",
+        "screenshot_save",
+        "system_info",
+        "notify",
+        "volume",
+        "media",
+        "window_list",
+        "window_focus",
         "wait",
     }
     assert set(TOOL_NAMES) == expected
@@ -34,3 +44,15 @@ def test_wait_clamps_duration():
     result, changed = execute("wait", {"seconds": 0.2})
     assert result.startswith("esperou")
     assert changed is True
+
+
+def test_system_info_is_real():
+    result, changed = execute("system_info", {})
+    assert "so:" in result
+    assert changed is False
+
+
+def test_fetch_blocks_localhost():
+    result, changed = execute("fetch_url", {"url": "http://127.0.0.1/secret"})
+    assert "bloqueado" in result
+    assert changed is False
