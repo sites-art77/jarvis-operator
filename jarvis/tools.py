@@ -34,6 +34,12 @@ TOOLS = [
     _fn("window_list", "Lista janelas visíveis.", {}),
     _fn("window_focus", "Traz uma janela para frente pelo título (trecho).", {"title": {"type": "string"}}, ["title"]),
     _fn("wait", "Espera a UI responder, em segundos (0.2 a 8).", {"seconds": {"type": "number"}}, ["seconds"]),
+    _fn(
+        "done",
+        "ÚNICA forma de encerrar. Chame somente quando o pedido original estiver 100% concluído e verificado.",
+        {"summary": {"type": "string", "description": "O que foi feito de fato."}},
+        ["summary"],
+    ),
 ]
 
 TOOL_NAMES = tuple(item["function"]["name"] for item in TOOLS)

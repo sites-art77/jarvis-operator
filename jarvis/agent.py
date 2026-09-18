@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable
 
 from jarvis.config import Settings
-from jarvis.prompt import SYSTEM, observation_text
+from jarvis.prompt import CONTINUE, SYSTEM, observation_text
 from jarvis.tools import TOOLS
 from jarvis.xai import Brain, jpeg_data_url, parse_args
 
@@ -38,6 +38,8 @@ def _log_default(line: str) -> None:
 
 def execute(name: str, args: dict[str, Any]) -> tuple[str, bool]:
     """Run a real OS action. Returns (result, changed_screen)."""
+    if name == "done":
+        return str(args.get("summary") or "ordem concluída").strip(), False
     if name == "wait":
         seconds = min(8.0, max(0.2, float(args.get("seconds") or 0.8)))
         time.sleep(seconds)
@@ -150,16 +152,34 @@ class Agent:
             ],
         }
 
+    def _compact(self, order: str) -> None:
+        if len(self.messages) <= 22:
+            return
+        system = self.messages[0]
+        self.messages = [
+            system,
+            {"role": "user", "content": f"Ordem em curso (não encerrar antes de done): {order}"},
+            *self.messages[-18:],
+        ]
+
     def run(self, order: str) -> str:
         self.log(f"[{self.settings.provider}] ordem: {order}")
         self.messages.append({"role": "user", "content": order})
         self.messages.append(self._observe())
-        final = ""
+        last_text = ""
+        idle = 0
+        acted_ever = False
         for step in range(self.settings.max_steps):
+            self._compact(order)
+            self.log(f"  passo {step + 1}/{self.settings.max_steps}")
             message = self.brain.chat(self.messages, TOOLS)
             tool_calls = message.get("tool_calls") or []
             content = (message.get("content") or "").strip()
+            if content:
+                last_text = content
+
             if tool_calls:
+                idle = 0
                 self.messages.append(
                     {
                         "role": "assistant",
@@ -167,13 +187,26 @@ class Agent:
                         "tool_calls": tool_calls,
                     }
                 )
-                saw_screen = False
+                done_summary: str | None = None
+                acted = False
                 for call in tool_calls:
                     fn = call.get("function") or {}
                     name = fn.get("name") or ""
                     args = parse_args(fn.get("arguments") or "")
                     self.log(f"  → {name} {json.dumps(args, ensure_ascii=False)}")
+                    if name == "done":
+                        done_summary = str(args.get("summary") or content or "Ordem concluída.").strip()
+                        self.messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": call.get("id"),
+                                "content": done_summary,
+                            }
+                        )
+                        continue
                     result, changed = execute(name, args)
+                    acted = True
+                    acted_ever = True
                     self.log(f"    {result.splitlines()[0][:180]}")
                     self.messages.append(
                         {
@@ -182,15 +215,39 @@ class Agent:
                             "content": result[:6000],
                         }
                     )
-                    saw_screen = saw_screen or changed
-                if saw_screen:
-                    time.sleep(0.25)
+                    if changed:
+                        time.sleep(0.28)
+                if done_summary is not None and not acted:
+                    self.log(done_summary)
+                    return done_summary
+                if done_summary is not None and acted:
+                    time.sleep(0.2)
                     self.messages.append(self._observe())
+                    self.messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Você chamou done depois de agir. Confirme na tela se o pedido "
+                                f"está 100% feito. Se sim, chame done de novo. Pedido: {order}"
+                            ),
+                        }
+                    )
+                    continue
+                time.sleep(0.2)
+                self.messages.append(self._observe())
                 continue
-            final = content or "Ordem concluída."
-            self.messages.append({"role": "assistant", "content": final})
-            self.log(final)
-            return final
-        final = "Limite de passos atingido. Interrompo aqui, senhor."
+
+            idle += 1
+            if content:
+                self.messages.append({"role": "assistant", "content": content})
+                self.log(f"  (ainda não concluiu) {content[:160]}")
+            if idle >= 2 and not acted_ever:
+                final = last_text or "Pronto, senhor."
+                self.log(final)
+                return final
+            self.messages.append({"role": "user", "content": CONTINUE.format(order=order)})
+            self.messages.append(self._observe())
+
+        final = last_text or "Limite de passos atingido. Interrompo aqui, senhor."
         self.log(final)
         return final

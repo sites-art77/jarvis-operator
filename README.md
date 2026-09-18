@@ -69,7 +69,7 @@ Linux: X11 (Wayland puro às vezes bloqueia captura).
 - Abrir URL no navegador **e** ler página com `fetch_url`
 - Clipboard, notificações, volume, mídia
 - Listar e focar janelas
-- Loop autônomo: observa → pensa → age → observa de novo
+- Loop autônomo: observa → pensa → age → observa de novo, **sem parar até o pedido estar concluído** (`done`)
 
 ```bash
 python -m jarvis --voice --listen 6   # voz exige XAI_API_KEY também

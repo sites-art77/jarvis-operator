@@ -10,6 +10,7 @@ WIRED = set(OS_TOOLS) | {
     "fetch_url",
     "window_list",
     "window_focus",
+    "done",
 }
 
 
@@ -40,6 +41,7 @@ def test_tool_catalog_covers_computer_use():
         "window_list",
         "window_focus",
         "wait",
+        "done",
     }
     assert set(TOOL_NAMES) == expected
     assert set(TOOL_NAMES) == WIRED
@@ -67,4 +69,10 @@ def test_system_info_is_real():
 def test_fetch_blocks_localhost():
     result, changed = execute("fetch_url", {"url": "http://127.0.0.1/secret"})
     assert "bloqueado" in result
+    assert changed is False
+
+
+def test_done_is_wired():
+    result, changed = execute("done", {"summary": "bloco de notas aberto"})
+    assert result == "bloco de notas aberto"
     assert changed is False

@@ -92,6 +92,6 @@ def load_settings() -> Settings:
         vision_model=vision,
         lang=os.environ.get("JARVIS_LANG", "pt-BR").strip() or "pt-BR",
         voice=os.environ.get("JARVIS_VOICE", "altair").strip() or "altair",
-        max_steps=max(1, int(os.environ.get("JARVIS_MAX_STEPS", "20"))),
+        max_steps=max(1, int(os.environ.get("JARVIS_MAX_STEPS", "48"))),
         xai_key=xai,
     )
