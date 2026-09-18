@@ -11,7 +11,7 @@ def test_nvidia_key_selects_nvidia_provider(monkeypatch):
     s = load_settings()
     assert s.provider == "nvidia"
     assert "nvidia.com" in s.api_base
-    assert s.model.startswith("meta/") or s.model.startswith("nvidia/")
+    assert s.model.startswith("nvidia/") or s.model.startswith("meta/")
 
 
 def test_xai_when_only_xai(monkeypatch):

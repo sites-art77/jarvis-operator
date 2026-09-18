@@ -1,34 +1,43 @@
 # J.A.R.V.I.S. Operator
 
-Operador **local e real**. Vê a tela (visão NVIDIA Nemotron ou Grok), move o mouse, clica, digita, abre apps, lê a web, controla volume/janelas e executa o que você pedir. Isto **não** é um chat holográfico fingindo que clicou.
+Operador **local e real**. Vê a tela, move o mouse, clica, digita, abre apps, lê a web, controla volume/janelas e executa o que você pedir.
 
-Um site no navegador **não consegue** controlar o mouse da sua máquina. Este processo roda **no seu computador**.
+Isto **não** é um chat holográfico fingindo que clicou. Um site no navegador **não consegue** controlar o mouse da sua máquina. Este processo roda **no seu computador**.
 
 Não é um produto da Marvel. É uma homenagem de engenharia.
 
-## Cérebro
+## Windows (CMD)
 
-| Chave no `.env` | Papel |
-|---|---|
-| `NVIDIA_API_KEY` | Visão da tela + raciocínio e ferramentas ([build.nvidia.com](https://build.nvidia.com)) |
-| `XAI_API_KEY` | Opcional: voz (TTS/STT). Se não houver NVIDIA, o Grok assume o cérebro |
+Precisa de [Python 3.11+](https://www.python.org/downloads/) (marque *Add python.exe to PATH*) e [Git](https://git-scm.com/download/win).
 
-Padrão: se a chave NVIDIA existir, ela é usada. Nunca cole a chave no git nem no chat.
+```bat
+cd %USERPROFILE%\Desktop
+git clone https://github.com/sites-art77/jarvis-operator.git
+cd jarvis-operator
+install.cmd
+```
 
-## O que ele faz de verdade
+O `install.cmd` cria o venv, instala as libs, abre o `.env` e **move o mouse de verdade** (`--self-test`).
 
-- Screenshot + visão (Nemotron VL na NVIDIA, ou Grok)
-- Mouse: mover, clique, duplo, direito, arrastar, scroll
-- Teclado: texto, atalhos, teclas
-- Apps, pastas, arquivos, shell (com bloqueio de wipe/shutdown)
-- Abrir URL no navegador **e** ler página com `fetch_url`
-- Clipboard, notificações, volume, mídia
-- Listar e focar janelas
-- Loop autônomo: observa → pensa → age → observa de novo
+Cole no `.env`:
+
+```
+NVIDIA_API_KEY=nvapi-...
+```
+
+Chave em [build.nvidia.com](https://build.nvidia.com). Nunca commite o `.env`.
+
+Depois:
+
+```bat
+rodar.cmd
+rodar.cmd "abra o bloco de notas e escreva olá senhor"
+python -m jarvis --self-test
+```
 
 Failsafe: jogue o mouse no **canto superior esquerdo** para abortar.
 
-## Instalação
+## Linux / macOS
 
 ```bash
 git clone https://github.com/sites-art77/jarvis-operator.git
@@ -37,22 +46,32 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-```
-
-No `.env` local:
-
-```
-NVIDIA_API_KEY=nvapi-...
+python -m jarvis --self-test
+python -m jarvis "abra o navegador e pesquise o clima no Rio de Janeiro"
 ```
 
 macOS: Ajustes → Privacidade → Acessibilidade (habilite o Terminal).  
-Linux: X11/Wayland, `python3-tk`.
+Linux: X11 (Wayland puro às vezes bloqueia captura).
 
-## Uso
+## Cérebro
+
+| Chave no `.env` | Papel |
+|---|---|
+| `NVIDIA_API_KEY` | Visão da tela + raciocínio e ferramentas ([build.nvidia.com](https://build.nvidia.com)) |
+| `XAI_API_KEY` | Opcional: voz (TTS/STT). Se não houver NVIDIA, o Grok assume o cérebro |
+
+## O que ele faz de verdade
+
+- Screenshot + visão (Nemotron VL na NVIDIA, com reserva Grok se houver chave)
+- Mouse: mover, clique, duplo, direito, arrastar, scroll
+- Teclado: texto, atalhos, teclas
+- Apps, pastas, arquivos, shell (com bloqueio de wipe/shutdown)
+- Abrir URL no navegador **e** ler página com `fetch_url`
+- Clipboard, notificações, volume, mídia
+- Listar e focar janelas
+- Loop autônomo: observa → pensa → age → observa de novo
 
 ```bash
-python -m jarvis "abra o navegador e pesquise o clima no Rio de Janeiro"
-python -m jarvis
 python -m jarvis --voice --listen 6   # voz exige XAI_API_KEY também
 ```
 
@@ -61,7 +80,7 @@ python -m jarvis --voice --listen 6   # voz exige XAI_API_KEY também
 - Chaves só no `.env`. Nunca no git.
 - Wipe de disco, shutdown e fork bomb são bloqueados.
 - `fetch_url` recusa localhost e IPs privados.
-- Não rode como root.
+- Não rode como Administrador / root.
 
 ## Testes (sem display)
 

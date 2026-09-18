@@ -1,5 +1,16 @@
-from jarvis.agent import execute
+from jarvis.agent import OS_TOOLS, execute
 from jarvis.tools import TOOL_NAMES, TOOLS
+
+WIRED = set(OS_TOOLS) | {
+    "wait",
+    "clipboard_get",
+    "clipboard_set",
+    "system_info",
+    "notify",
+    "fetch_url",
+    "window_list",
+    "window_focus",
+}
 
 
 def test_tool_catalog_covers_computer_use():
@@ -31,6 +42,7 @@ def test_tool_catalog_covers_computer_use():
         "wait",
     }
     assert set(TOOL_NAMES) == expected
+    assert set(TOOL_NAMES) == WIRED
     assert all(item["type"] == "function" for item in TOOLS)
 
 

@@ -10,8 +10,13 @@ load_dotenv()
 
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 XAI_BASE = "https://api.x.ai/v1"
-NVIDIA_MODEL = "meta/llama-3.3-70b-instruct"
-NVIDIA_VISION = "nvidia/llama-3.1-nemotron-nano-vl-8b-v1"
+NVIDIA_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
+NVIDIA_VISION = "nvidia/nemotron-nano-12b-v2-vl"
+NVIDIA_VISION_FALLBACKS = (
+    "nvidia/nemotron-nano-12b-v2-vl",
+    "microsoft/phi-4-multimodal-instruct",
+    "meta/llama-3.2-11b-vision-instruct",
+)
 XAI_MODEL = "grok-4.5"
 
 

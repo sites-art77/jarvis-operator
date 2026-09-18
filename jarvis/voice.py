@@ -41,6 +41,7 @@ def play_mp3(data: bytes) -> None:
             return
         except Exception:
             pass
+    # fallback: write wav-less, try ffplay/afplay
     import shutil
     import subprocess
 

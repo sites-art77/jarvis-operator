@@ -7,9 +7,29 @@ from typing import Any, Callable
 from jarvis.config import Settings
 from jarvis.prompt import SYSTEM, observation_text
 from jarvis.tools import TOOLS
-from jarvis.xai import XAI, jpeg_data_url, parse_args
+from jarvis.xai import Brain, jpeg_data_url, parse_args
 
 Log = Callable[[str], None]
+
+OS_TOOLS = {
+    "mouse_move",
+    "click",
+    "drag",
+    "scroll",
+    "type_text",
+    "hotkey",
+    "press",
+    "open_app",
+    "open_url",
+    "open_path",
+    "list_dir",
+    "read_file",
+    "write_file",
+    "run_command",
+    "screenshot_save",
+    "volume",
+    "media",
+}
 
 
 def _log_default(line: str) -> None:
@@ -22,22 +42,38 @@ def execute(name: str, args: dict[str, Any]) -> tuple[str, bool]:
         seconds = min(8.0, max(0.2, float(args.get("seconds") or 0.8)))
         time.sleep(seconds)
         return f"esperou {seconds:.1f}s", True
-    if name not in {
-        "mouse_move",
-        "click",
-        "drag",
-        "scroll",
-        "type_text",
-        "hotkey",
-        "press",
-        "open_app",
-        "open_url",
-        "open_path",
-        "list_dir",
-        "read_file",
-        "write_file",
-        "run_command",
-    }:
+    if name == "clipboard_get":
+        from jarvis.system import clipboard_get
+
+        return clipboard_get(), False
+    if name == "clipboard_set":
+        from jarvis.system import clipboard_set
+
+        return clipboard_set(str(args.get("text") or "")), False
+    if name == "system_info":
+        from jarvis.system import system_info
+
+        return system_info(), False
+    if name == "notify":
+        from jarvis.system import notify
+
+        return notify(str(args.get("title") or "J.A.R.V.I.S."), str(args.get("message") or "")), False
+    if name == "fetch_url":
+        from jarvis.net import fetch_text
+
+        try:
+            return fetch_text(str(args.get("url") or "")), False
+        except ValueError as exc:
+            return f"bloqueado: {exc}", False
+    if name == "window_list":
+        from jarvis.system import window_list
+
+        return window_list(), False
+    if name == "window_focus":
+        from jarvis.system import window_focus
+
+        return window_focus(str(args.get("title") or "")), True
+    if name not in OS_TOOLS:
         return f"ferramenta desconhecida: {name}", False
 
     from jarvis import apps, computer
@@ -81,13 +117,20 @@ def execute(name: str, args: dict[str, Any]) -> tuple[str, bool]:
         return apps.read_file(str(args.get("path") or "")), False
     if name == "write_file":
         return apps.write_file(str(args.get("path") or ""), str(args.get("content") or "")), False
+    if name == "screenshot_save":
+        return computer.screenshot_save(args.get("path")), False
+    if name == "volume":
+        return computer.volume(str(args.get("action") or "")), False
+    if name == "media":
+        return computer.media(str(args.get("action") or "")), False
     return apps.run_command(str(args.get("command") or "")), True
 
 
 class Agent:
     def __init__(self, settings: Settings, log: Log = _log_default) -> None:
         self.settings = settings
-        self.xai = XAI(settings)
+        self.brain = Brain(settings)
+        self.xai = self.brain
         self.log = log
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM}]
 
@@ -95,21 +138,25 @@ class Agent:
         from jarvis import computer
 
         jpeg, scr = computer.screenshot_jpeg()
+        caption = observation_text(scr.width, scr.height)
+        if self.settings.provider == "nvidia":
+            desc = self.brain.see(jpeg, caption)
+            return {"role": "user", "content": desc}
         return {
             "role": "user",
             "content": [
-                {"type": "text", "text": observation_text(scr.width, scr.height)},
+                {"type": "text", "text": caption},
                 {"type": "image_url", "image_url": {"url": jpeg_data_url(jpeg), "detail": "high"}},
             ],
         }
 
     def run(self, order: str) -> str:
-        self.log(f"ordem: {order}")
+        self.log(f"[{self.settings.provider}] ordem: {order}")
         self.messages.append({"role": "user", "content": order})
         self.messages.append(self._observe())
         final = ""
         for step in range(self.settings.max_steps):
-            message = self.xai.chat(self.messages, TOOLS)
+            message = self.brain.chat(self.messages, TOOLS)
             tool_calls = message.get("tool_calls") or []
             content = (message.get("content") or "").strip()
             if tool_calls:

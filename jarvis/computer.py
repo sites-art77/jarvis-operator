@@ -1,12 +1,25 @@
 from __future__ import annotations
 
 import io
+import os
+import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import mss
 import pyautogui
 from PIL import Image
+
+from jarvis.safety import inspect_path_write
+
+if os.name == "nt":
+    try:
+        import ctypes
+
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
 
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.04
@@ -64,7 +77,7 @@ def scroll(amount: int) -> str:
 
 
 def type_text(text: str, interval: float = 0.02) -> str:
-    pyautogui.typewrite(text, interval=max(0.0, interval))
+    pyautogui.write(text, interval=max(0.0, interval))
     return f"digitou {len(text)} caracteres"
 
 
@@ -72,8 +85,16 @@ def hotkey(*keys: str) -> str:
     cleaned = [k.strip().lower() for k in keys if k and k.strip()]
     if not cleaned:
         return "nenhuma tecla"
-    pyautogui.hotkey(*cleaned)
-    return "teclas: " + "+".join(cleaned)
+    mapped = []
+    for key in cleaned:
+        if key in {"cmd", "command", "super"} and os.name == "nt":
+            mapped.append("win")
+        elif key in {"cmd", "command", "win"} and sys.platform == "darwin":
+            mapped.append("command")
+        else:
+            mapped.append(key)
+    pyautogui.hotkey(*mapped)
+    return "teclas: " + "+".join(mapped)
 
 
 def press(key: str) -> str:
@@ -81,9 +102,31 @@ def press(key: str) -> str:
     return f"tecla {key}"
 
 
+def volume(action: str) -> str:
+    key = {"up": "volumeup", "down": "volumedown", "mute": "volumemute"}.get((action or "").lower())
+    if not key:
+        return "action: up|down|mute"
+    pyautogui.press(key)
+    return f"volume {action}"
+
+
+def media(action: str) -> str:
+    key = {
+        "play_pause": "playpause",
+        "next": "nexttrack",
+        "prev": "prevtrack",
+        "stop": "stop",
+    }.get((action or "").lower())
+    if not key:
+        return "action: play_pause|next|prev|stop"
+    pyautogui.press(key)
+    return f"mídia {action}"
+
+
 def screenshot_jpeg(max_side: int = 1280, quality: int = 72) -> tuple[bytes, Screen]:
     with mss.mss() as sct:
-        raw = sct.grab(sct.monitors[1])
+        monitors = sct.monitors
+        raw = sct.grab(monitors[1] if len(monitors) > 1 else monitors[0])
         img = Image.frombytes("RGB", raw.size, raw.rgb)
     w, h = img.size
     scale = min(1.0, max_side / max(w, h))
@@ -92,3 +135,14 @@ def screenshot_jpeg(max_side: int = 1280, quality: int = 72) -> tuple[bytes, Scr
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=quality, optimize=True)
     return buf.getvalue(), Screen(width=w, height=h)
+
+
+def screenshot_save(path: str | None = None) -> str:
+    jpeg, _ = screenshot_jpeg(max_side=1920, quality=85)
+    target = Path(path).expanduser() if path else Path.home() / f"jarvis-{int(time.time())}.jpg"
+    decision = inspect_path_write(str(target))
+    if not decision.allowed:
+        return decision.reason
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(jpeg)
+    return f"screenshot em {target} ({len(jpeg)} bytes)"

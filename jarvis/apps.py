@@ -9,6 +9,37 @@ from pathlib import Path
 
 from jarvis.safety import inspect_command, inspect_path_write, confirm
 
+WIN_ALIASES = {
+    "bloco de notas": "notepad.exe",
+    "bloco-de-notas": "notepad.exe",
+    "notepad": "notepad.exe",
+    "anotacoes": "notepad.exe",
+    "calculadora": "calc.exe",
+    "calculator": "calc.exe",
+    "calc": "calc.exe",
+    "explorer": "explorer.exe",
+    "arquivos": "explorer.exe",
+    "pasta": "explorer.exe",
+    "paint": "mspaint.exe",
+    "cmd": "cmd.exe",
+    "prompt": "cmd.exe",
+    "powershell": "powershell.exe",
+    "terminal": "wt.exe",
+    "edge": "msedge",
+    "chrome": "chrome",
+    "google chrome": "chrome",
+    "firefox": "firefox",
+    "code": "code",
+    "vscode": "code",
+    "visual studio code": "code",
+    "spotify": "spotify",
+    "discord": "discord",
+    "whatsapp": "whatsapp",
+    "word": "winword",
+    "excel": "excel",
+    "navegador": "msedge",
+}
+
 
 def open_url(url: str) -> str:
     if not url.startswith(("http://", "https://")):
@@ -40,8 +71,9 @@ def open_app(name: str) -> str:
             return r.stderr.strip() or f"falhou ao abrir {app}"
         return f"aplicativo {app} aberto"
     if os.name == "nt":
-        subprocess.Popen(["cmd", "/c", "start", "", app], shell=False)
-        return f"aplicativo {app} solicitado"
+        resolved = WIN_ALIASES.get(app.lower(), app)
+        subprocess.Popen(["cmd", "/c", "start", "", resolved], shell=False)
+        return f"aplicativo {resolved} solicitado"
     bin_path = shutil.which(app)
     if bin_path:
         subprocess.Popen([bin_path])

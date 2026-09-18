@@ -1,6 +1,6 @@
 [project]
 name = "jarvis-operator"
-version = "1.0.0"
+version = "1.1.0"
 description = "J.A.R.V.I.S. local: vê a tela, move o mouse, clica e executa."
 readme = "README.md"
 requires-python = ">=3.11"
