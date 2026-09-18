@@ -13,21 +13,25 @@ def main(argv: list[str] | None = None) -> int:
         description="J.A.R.V.I.S. local — vê a tela, move o mouse, clica e executa.",
     )
     parser.add_argument("order", nargs="*", help="Ordem em português. Vazio = REPL.")
-    parser.add_argument("--voice", action="store_true", help="Escuta o microfone, executa, responde em voz.")
+    parser.add_argument("--voice", action="store_true", help="Escuta o microfone, executa, responde em voz (exige XAI_API_KEY).")
     parser.add_argument("--listen", type=float, default=5.0, help="Segundos de escuta no modo --voice.")
     args = parser.parse_args(argv)
 
     settings = load_settings()
     agent = Agent(settings)
+    print(f"núcleo: {settings.provider} ({settings.model})", flush=True)
 
     if args.voice:
+        if not settings.can_speak:
+            print("Voz precisa de XAI_API_KEY no .env (a NVIDIA cobre visão e ações).")
+            return 2
         from jarvis.voice import listen_and_transcribe, speak
 
-        print("Modo voz. Ctrl+C para sair. Mova o mouse ao canto para abortar um clique (failsafe).")
+        print("Modo voz. Ctrl+C para sair. Mouse no canto superior esquerdo aborta.")
         try:
             while True:
                 try:
-                    text = listen_and_transcribe(agent.xai, args.listen)
+                    text = listen_and_transcribe(agent.brain, args.listen)
                 except Exception as exc:
                     print(f"transcrição falhou: {exc}")
                     continue
@@ -37,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"você: {text}")
                 reply = agent.run(text)
                 try:
-                    speak(settings, agent.xai, reply)
+                    speak(settings, agent.brain, reply)
                 except Exception as exc:
                     print(f"voz: {exc}")
         except KeyboardInterrupt:
